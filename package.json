@@ -2,7 +2,7 @@
   "name": "zmqc",
   "version": "0.1.0",
   "description": "A small but powerful command-line interface to ZMQ",
-  "main": "index.js",
+  "main": "zmqc.js",
   "dependencies": {
     "arg-parser": "~1.0.1",
     "zmq": "~2.6.0"
@@ -18,8 +18,7 @@
   "keywords": [
     "zmq",
     "zeromq",
-    "command",
-    "line"
+    "commandline",
   ],
   "author": "Edward Choh",
   "license": "nolicence"
