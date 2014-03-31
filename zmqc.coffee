@@ -22,7 +22,7 @@
 # forward them to a PULL socket bound to port 5404 (so we're connecting with
 # a PUSH).
 #
-# zmqc -n 10 -0 -r -t=PULL -b='tcp://*:4123' | xargs -0 grep 'pattern'
+# zmqc -n 10 -0=0 -r -t=PULL -b='tcp://*:4123' | xargs -0 grep 'pattern'
 #
 # Bind to a PULL socket on port 4123, receive 10 messages from the socket
 # (with each message representing a filename), and grep the files for
@@ -79,14 +79,15 @@
 
 Args = require 'arg-parser'
 zmq = require 'zmq'
+readline = require 'readline'
 
 args = new Args 'zmqc', '0.1', 'A small but powerful command-line interface to ZMQ', 'https://github.com/edwardchoh/zmqc'
 
 args.add
 	name: 'delimiter'
-	desc: "Separate messages on input/output should be delimited by NULL characters (instead of newlines). Use this if your messages may contain newlines, and you want to avoid ambiguous message borders."
+	desc: "Separate messages on input/output should be delimited by the ASCII code (instead of newlines). Use this if your messages may contain other delimiters, and you want to avoid ambiguous message borders."
 	switches: ['-0', '--delimiter']
-	default: '\0'
+	default: 0x0a
 	value: 'delimiter'
 
 args.add
@@ -167,13 +168,26 @@ main = ->
 		sock.connect args.params.connect
 
 	if args.params.write
-		process.stdin.on 'readable', () ->
-			chunk = process.stdin.read()
-			if chunk != null
-				sock.send splitBuffer(chunk, args.params.delimiter)
+		#process.stdin.setEncoding 'utf8'
+		multipart = []
+		process.stdin.on 'data', (chunk) ->
+			# chop off any trailing \n
+			if chunk[chunk.length - 1] == args.params.delimiter
+				chunk = chunk.slice 0, chunk.length - 1
+
+			if chunk.length == 0
+				# multipart is done
+				sock.send multipart
+				multipart = []
+			else
+				multipart.push chunk
 	else
+		delim = new Buffer([args.params.delimiter])
 		sock.on 'message', (data) ->
-			process.stdout.write data
+			for arg, idx in Array.prototype.slice.call(arguments, 0)
+				process.stdout.write arg
+				process.stdout.write delim
+			process.stdout.write delim
 
 if not args.parse()
 	return args.help()
